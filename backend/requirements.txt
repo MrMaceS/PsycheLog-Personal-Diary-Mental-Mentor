@@ -1,0 +1,42 @@
+# Web framework
+FastApi
+uvicorn[standard]
+python-multipart
+httpx2
+# Database
+sqlalchemy[asyncio]
+asyncpg
+alembic
+
+# Validation
+pydantic
+pydantic-settings
+email-validator
+
+# Security
+python-jose[crypto]
+passlib[bcrypt]
+bcrypt
+
+# Redis
+redis
+
+# RabbitMQ + Celery
+celery
+
+# AI providers
+google-generativeai
+groq
+httpx
+
+# Storage
+boto3
+
+# Logging
+structlog
+
+# Testing
+pytest
+pytest-asyncio
+pytest-cov
+pytest-env
