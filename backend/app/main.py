@@ -1,9 +1,10 @@
 from app.core.config import settings
-from app.core.database import close_db
+from app.core.database import close_db, AsyncSessionLocal
 from app.core.logging_config import setup_logging
 from app.api.v1.router import api_router
+from sqlalchemy import text
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import app.models
 
@@ -67,3 +68,25 @@ async def health_check():
         "status": "healthy",
         "environment": settings.ENVIRONMENT,
     }
+
+
+@app.get("/ready", tags=["Health"])
+async def readiness_check():
+    """Проверка доступности критической инфраструктуры."""
+    try:
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("SELECT 1"))
+
+        return {
+            "status": "ready",
+            "database": "ok",
+        }
+
+    except Exception:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "status": "not_ready",
+                "database": "unavailable",
+            },
+        )
