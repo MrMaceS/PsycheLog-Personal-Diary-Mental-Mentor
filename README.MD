@@ -53,6 +53,7 @@ docker compose up -d postgres
 ```powershell
 docker exec -it <имя_контейнера_postgres> psql -U postgres -c "CREATE DATABASE psychelog;"
 docker exec -it <имя_контейнера_postgres> psql -U postgres -c "CREATE DATABASE psychelog_test;"
+Моё: docker exec -it project_root-postgres-1 psql -U app_user -d psychelog
 ```
 
 Замени `<имя_контейнера_postgres>` на реальное имя контейнера (например, `project_root-postgres-1`).
