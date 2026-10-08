@@ -65,5 +65,5 @@ jobs:
           S3_SECRET_KEY: test-secret-key
           S3_BUCKET: test-bucket
           S3_REGION: us-east-1
-          ENCRYPTION_MASTER_KEY: test-encryption-master-key
+          ENCRYPTION_MASTER_KEY: test-encryption-master-key-32-bytes
           LOG_LEVEL: INFO
