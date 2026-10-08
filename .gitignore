@@ -37,9 +37,7 @@ ENV-WSL/
 
 # Environment
 .env
-.env.local
-.env.*.local
-.env.test
+.env.*
 !.env.example
 
 # Testing

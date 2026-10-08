@@ -1,11 +1,10 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
 from app.core.config import settings
-from app.core.database import init_db, close_db
+from app.core.database import close_db
 from app.core.logging_config import setup_logging
 from app.api.v1.router import api_router
-import uvicorn
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import app.models
 
 
@@ -13,9 +12,9 @@ import app.models
 async def lifespan(app: FastAPI):
     """Управление жизненным циклом приложения."""
     setup_logging()
-    if settings.ENVIRONMENT == "development":
-        await init_db()
+
     yield
+
     await close_db()
 
 
@@ -25,29 +24,46 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
     openapi_tags=[
-        {"name": "Authentication", "description": "Регистрация, вход, logout"},
-        {"name": "Users", "description": "Профиль пользователя"},
+        {
+            "name": "Authentication",
+            "description": "Регистрация, вход, logout",
+        },
+        {
+            "name": "Users",
+            "description": "Профиль пользователя",
+        },
+        {
+            "name": "Diary",
+            "description": "Записи личного дневника",
+        },
     ],
 )
 
-# CORS
+
+allowed_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
-# Router
+
 app.include_router(api_router, prefix="/api/v1")
 
 
-@app.get("/health")
+@app.get("/health", tags=["Health"])
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "environment": settings.ENVIRONMENT}
-
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    return {
+        "status": "healthy",
+        "environment": settings.ENVIRONMENT,
+    }
