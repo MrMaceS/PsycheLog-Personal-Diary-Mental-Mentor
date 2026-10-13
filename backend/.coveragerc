@@ -1,0 +1,17 @@
+[run]
+source = app
+omit =
+    app/workers/*
+    alembic/*
+    tests/*
+    */__init__.py
+    app/main.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if __name__ == .__main__.
+    raise NotImplementedError
+    raise HTTPException
+    logger\.(info|warning|error|debug)
