@@ -104,47 +104,59 @@ class AuthService:
 
         now = AuthService.now_utc()
 
-        if user.locked_until and user.locked_until > now:
-            logger.warning(
-                "login_failed_pin_locked",
-                user_id=user.id,
-            )
-            raise ValueError("Аккаунт заблокирован. Попробуйте позже.")
+        if user.failed_login_attempts >= settings.PIN_FREEZE_AFTER_ATTEMPTS + 1:
+            logger.warning("login_failed_hard_locked", user_id=user.id)
+            raise ValueError("Аккаунт заблокирован."
+                             " Используйте восстановление доступа через OTP.")
+
+        if (
+                user.failed_login_attempts >= settings.PIN_FREEZE_AFTER_ATTEMPTS
+                and user.locked_until
+                and user.locked_until > now
+        ):
+            user.failed_login_attempts += 1
+            await db.commit()
+            logger.warning("login_failed_escalated_to_hard_lock", user_id=user.id)
+            raise ValueError("Аккаунт заблокирован. Используйте восстановление доступа через OTP.")
 
         if not verify_pin(pin, user.hashed_pin):
             user.failed_login_attempts += 1
 
-            if (
-                user.failed_login_attempts
-                >= settings.PIN_FREEZE_AFTER_ATTEMPTS
-            ):
-                user.locked_until = now + timedelta(
-                    minutes=settings.PIN_FREEZE_MINUTES
-                )
-
+            if user.failed_login_attempts == settings.PIN_FREEZE_AFTER_ATTEMPTS:
+                user.locked_until = now + timedelta(minutes=settings.PIN_FREEZE_MINUTES)
+                await db.commit()
                 logger.warning(
-                    "pin_locked",
+                    "pin_locked_temporary",
                     user_id=user.id,
                     attempts=user.failed_login_attempts,
                 )
+                raise ValueError(
+                    f"Вход заблокирован на {settings.PIN_FREEZE_MINUTES} минут. "
+                    "Следующая попытка входа приведет к полной блокировке аккаунта."
+                )
+
+            if user.failed_login_attempts >= settings.PIN_FREEZE_AFTER_ATTEMPTS + 1:
+                await db.commit()
+                logger.warning(
+                    "pin_locked_permanent",
+                    user_id=user.id,
+                    attempts=user.failed_login_attempts,
+                )
+                raise ValueError("Аккаунт заблокирован. Используйте восстановление доступа через OTP.")
 
             await db.commit()
-
             logger.warning(
                 "login_failed_invalid_pin",
                 user_id=user.id,
                 attempts=user.failed_login_attempts,
             )
-
             return None
 
         user.failed_login_attempts = 0
         user.locked_until = None
 
         tokens = await AuthService.create_tokens(db, user.id)
-
         await db.commit()
-
         logger.info(
             "user_logged_in",
             user_id=user.id,

@@ -286,34 +286,37 @@ def test_verify_otp_with_wrong_code(client):
 
 def test_account_locks_after_failed_pins(client):
     user_data = make_user_data()
-
     register_response = client.post(
         "/api/v1/auth/register",
         json=user_data,
     )
-
     assert register_response.status_code == 201
 
-    for _ in range(3):
-        response = client.post(
-            "/api/v1/auth/login",
-            json={
-                "email": user_data["email"],
-                "pin": "9999",
-            },
-        )
+    wrong_pin_payload = {
+        "email": user_data["email"],
+        "pin": "9999",
+    }
 
-        assert response.status_code == 401
+    for attempt in range(2):
+        response = client.post("/api/v1/auth/login", json=wrong_pin_payload)
+        assert response.status_code == 401, f"Ожидался 401 на попытке {attempt + 1}"
+        assert "заблокирован" not in response.json()["detail"]
 
-    response = client.post(
-        "/api/v1/auth/login",
-        json={
-            "email": user_data["email"],
-            "pin": user_data["pin"],
-        },
-    )
+    response = client.post("/api/v1/auth/login", json=wrong_pin_payload)
+    assert response.status_code == 429
+    detail = response.json()["detail"]
+    assert "заблокирован" in detail
+    assert "минут" in detail
+    assert response.headers.get("Retry-After") == "600"
 
+    correct_pin_payload = {
+        "email": user_data["email"],
+        "pin": user_data["pin"],
+    }
+    response = client.post("/api/v1/auth/login", json=correct_pin_payload)
     assert response.status_code == 423
+    detail = response.json()["detail"]
+    assert "OTP" in detail or "восстановление" in detail
 
 
 def test_new_otp_invalidates_previous_otp(client):
@@ -374,3 +377,62 @@ def test_get_current_user_with_invalid_token(client):
     )
 
     assert response.status_code == 401
+
+
+def test_account_recovery_via_otp(client):
+    """
+    Проверяем полный цикл восстановления аккаунта через OTP
+    """
+    user_data = make_user_data()
+    register_response = client.post("/api/v1/auth/register", json=user_data)
+    assert register_response.status_code == 201
+
+    wrong_pin_payload = {"email": user_data["email"], "pin": "9999"}
+    for _ in range(4):
+        client.post("/api/v1/auth/login", json=wrong_pin_payload)
+
+    response = client.post("/api/v1/auth/login", json=wrong_pin_payload)
+    assert response.status_code == 423
+
+    otp_response = client.post(
+        "/api/v1/auth/request-otp",
+        json={"email": user_data["email"]}
+    )
+    assert otp_response.status_code == 200
+
+    otp = otp_response.json().get("otp")
+    assert otp is not None, "OTP должен быть возвращён в тестовом окружении"
+    assert len(otp) == 6, "OTP должен состоять из 6 цифр согласно ТЗ"
+
+    new_pin = "4321"
+    recover_response = client.post(
+        "/api/v1/auth/recover-account",
+        json={
+            "email": user_data["email"],
+            "otp": otp,
+            "new_pin": new_pin
+        }
+    )
+    assert recover_response.status_code == 200
+    assert "восстановлен" in recover_response.json()["message"].lower()
+
+    new_pin_payload = {"email": user_data["email"], "pin": new_pin}
+    login_response = client.post("/api/v1/auth/login", json=new_pin_payload)
+    assert login_response.status_code == 200
+    assert "access_token" in login_response.json()
+    assert "refresh_token" in login_response.json()
+
+    old_pin_payload = {"email": user_data["email"], "pin": user_data["pin"]}
+    old_login_response = client.post("/api/v1/auth/login", json=old_pin_payload)
+    assert old_login_response.status_code == 401
+
+    reuse_otp_response = client.post(
+        "/api/v1/auth/recover-account",
+        json={
+            "email": user_data["email"],
+            "otp": otp,
+            "new_pin": "9876"
+        }
+    )
+    assert reuse_otp_response.status_code == 400
+    assert "Не удалось восстановить аккаунт" in reuse_otp_response.json()["detail"]

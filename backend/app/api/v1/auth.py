@@ -54,11 +54,24 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
             )
         return TokenResponse(**tokens)
     except ValueError as e:
-        if "заблокирован" in str(e):
+        error_message = str(e)
+
+        # Жесткая блокировка (4+ ошибок) - требуется OTP
+        if "OTP" in error_message or "восстановление" in error_message:
             raise HTTPException(
                 status_code=status.HTTP_423_LOCKED,
-                detail=str(e),
+                detail=error_message,
             )
+
+        # Временная блокировка (3 ошибки) - таймер
+        if "заблокирован" in error_message and "минут" in error_message:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=error_message,
+                headers={"Retry-After": str(settings.PIN_FREEZE_MINUTES * 60)},
+            )
+
+        # Обычная ошибка входа
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Неверный email или PIN",
