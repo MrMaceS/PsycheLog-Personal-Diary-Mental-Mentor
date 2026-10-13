@@ -1,4 +1,6 @@
+# ================================
 # Python
+# ================================
 __pycache__/
 *.py[cod]
 *$py.class
@@ -20,7 +22,9 @@ wheels/
 .installed.cfg
 *.egg
 
+# ================================
 # Virtual environments
+# ================================
 .venv/
 venv/
 ENV/
@@ -28,27 +32,88 @@ ENV/
 venv-wsl/
 ENV-WSL/
 
-# IDE
+# ================================
+# IDE and editors
+# ================================
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+*.sublime-project
+*.sublime-workspace
 
-# Environment
+# ================================
+# Environment variables (CRITICAL!)
+# ================================
+# Никогда не коммитим файлы с секретами
 .env
-.env.*
-!.env.example
+.env.local
+.env.*.local
+backend/.env
+backend/.env.test
 
+# Разрешаем коммитить только шаблон
+!.env.example
+!backend/.env.example
+
+# ================================
 # Testing
+# ================================
 .pytest_cache/
 .coverage
 htmlcov/
 .tox/
+.nox/
 
+# ================================
 # Logs
+# ================================
 *.log
+logs/
 
-# OS
+# ================================
+# OS files
+# ================================
 .DS_Store
 Thumbs.db
+Desktop.ini
+
+# ================================
+# Docker (опционально)
+# ================================
+# Если не хочешь коммитить данные контейнеров
+postgres_data/
+redis_data/
+rabbitmq_data/
+minio_data/
+
+# ================================
+# Database
+# ================================
+*.sqlite3
+*.db
+
+# ================================
+# Celery
+# ================================
+celerybeat-schedule
+celerybeat.pid
+
+# ================================
+# MyPy / Type checking
+# ================================
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ================================
+# Ruff / Linting
+# ================================
+.ruff_cache/
+
+# ================================
+# Coverage
+# ================================
+coverage.xml
+*.cover
