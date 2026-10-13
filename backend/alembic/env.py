@@ -1,9 +1,15 @@
 from logging.config import fileConfig
 import asyncio
+from pathlib import Path
+import os
 from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
+from dotenv import load_dotenv
+
+ENV_FILE = Path(__file__).parent.parent.parent / ".env"
+load_dotenv(dotenv_path=ENV_FILE)
 
 from app.core.config import settings
 from app.core.database import Base
@@ -16,6 +22,7 @@ from app.models import (
     notification,
     stabilization,
     user,
+    media,
 )
 
 
@@ -24,9 +31,13 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+db_url = settings.DATABASE_URL
+if "@postgres:" in db_url:
+    db_url = db_url.replace("@postgres:", "@localhost:")
+
 config.set_main_option(
     "sqlalchemy.url",
-    settings.DATABASE_URL.replace("%", "%%"),
+    db_url.replace("%", "%%"),
 )
 
 target_metadata = Base.metadata

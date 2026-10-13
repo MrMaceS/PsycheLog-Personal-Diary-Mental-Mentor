@@ -11,6 +11,7 @@ from .mediation import (
     MediationStatus,
 )
 from .notification import Notification, NotificationType
+from .media import MediaAttachment
 
 
 __all__ = [
@@ -32,4 +33,5 @@ __all__ = [
     "MediationStatus",
     "Notification",
     "NotificationType",
+    "MediaAttachment",
 ]

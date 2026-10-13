@@ -9,7 +9,6 @@ celery_app = Celery(
 
 # Конфигурация Celery
 celery_app.conf.update(
-    # Сериализация задач
     task_serializer="json",
     accept_content=["json"],
     result_serializer="json",
@@ -25,6 +24,7 @@ celery_app.conf.update(
     # Автообнаружение задач
     include=[
         "app.workers.account_cleanup_tasks",
+        "app.workers.media_tasks",
         # "app.workers.transcription_tasks",  # Спринт 4
         # "app.workers.ai_tasks",             # Спринт 3
         # "app.workers.media_cleanup_tasks",  # Спринт 4
@@ -34,6 +34,15 @@ celery_app.conf.update(
 
 celery_app.conf.task_routes = {
     "app.workers.account_cleanup_tasks.*": {"queue": "cleanup"},
+    "app.workers.media_tasks.*": {"queue": "media_processing"},
     # "app.workers.transcription_tasks.*": {"queue": "ai"},
     # "app.workers.ai_tasks.*": {"queue": "ai"},
+}
+
+# Настройка периодических задач (Celery Beat)
+celery_app.conf.beat_schedule = {
+    "cleanup-expired-media-daily": {
+        "task": "app.workers.media_tasks.cleanup_expired_media_task",
+        "schedule": 86400.0,  # Каждые 24 часа (86400 секунд)
+    },
 }

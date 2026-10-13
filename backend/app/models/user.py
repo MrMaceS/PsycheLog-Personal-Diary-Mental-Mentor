@@ -33,6 +33,11 @@ class User(BaseModel):
         back_populates="user",
         cascade="all, delete-orphan"
     )
+    media_attachments = relationship(
+        "MediaAttachment",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
     stabilization_dialogs = relationship(
         "DiaryDialog",
         back_populates="user",

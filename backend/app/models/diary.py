@@ -39,3 +39,8 @@ class DiaryEntry(BaseModel):
         back_populates="entry",
         cascade="all, delete-orphan",
     )
+    media_attachments = relationship(
+        "MediaAttachment",
+        back_populates="diary_entry",
+        cascade="all, delete-orphan",
+    )
