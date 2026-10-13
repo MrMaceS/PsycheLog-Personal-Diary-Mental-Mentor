@@ -7,11 +7,12 @@ from app.main import app as fastapi_app
 from app.core.database import Base
 from app.core.config import settings
 
-import app.models.user  # noqa: F401
-import app.models.auth  # noqa: F401
-import app.models.diary  # noqa: F401
-import app.models.chat  # noqa: F401
-import app.models.mediation  # noqa: F401
+import app.models.user          # noqa: F401
+import app.models.auth          # noqa: F401
+import app.models.diary         # noqa: F401
+import app.models.stabilization # noqa: F401
+import app.models.chat          # noqa: F401
+import app.models.mediation     # noqa: F401
 import app.models.notification  # noqa: F401
 
 

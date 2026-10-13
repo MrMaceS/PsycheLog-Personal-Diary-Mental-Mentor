@@ -2,10 +2,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
 import hashlib
 import secrets
-
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.models.user import User
 from app.models.auth import RefreshSession, OTPChallenge
 from app.core.security import (
@@ -465,3 +463,36 @@ class AuthService:
         except Exception:
             await db.rollback()
             raise
+
+    @staticmethod
+    async def revoke_all_user_sessions(
+            db: AsyncSession,
+            user_id: int,
+    ) -> int:
+        """
+        Отзыв всех активных refresh-сессий пользователя.
+
+        ВАЖНО: не делает commit сам.
+        Вызывается внутри транзакции удаления аккаунта,
+        чтобы отзыв сессий и soft delete были атомарными.
+
+        Возвращает количество отозванных сессий.
+        """
+        result = await db.execute(
+            update(RefreshSession)
+            .where(
+                (RefreshSession.user_id == user_id)
+                & (RefreshSession.is_revoked.is_(False))
+            )
+            .values(is_revoked=True)
+        )
+
+        revoked_count = result.rowcount
+
+        logger.info(
+            "all_user_sessions_revoked",
+            user_id=user_id,
+            revoked_count=revoked_count,
+        )
+
+        return revoked_count
