@@ -119,3 +119,26 @@ class DiaryService:
         )
 
         return True
+
+    @staticmethod
+    async def update_ai_summary(
+            db: AsyncSession,
+            entry: DiaryEntry,
+            ai_summary: str,
+            ai_insights: Optional[str] = None,
+    ) -> DiaryEntry:
+        """Обновляет AI-резюме и инсайты для записи дневника."""
+        entry.ai_summary = ai_summary
+        if ai_insights is not None:
+            entry.ai_insights = ai_insights
+
+        entry.updated_at = datetime.now(timezone.utc)
+        await db.flush()
+        await db.refresh(entry)
+
+        logger.info(
+            "diary_entry_ai_summarized",
+            entry_id=entry.id,
+        )
+
+        return entry

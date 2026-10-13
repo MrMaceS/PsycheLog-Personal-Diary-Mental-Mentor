@@ -8,6 +8,7 @@ from app.core.logging_config import get_logger
 from app.models.user import User
 from fastapi.security import HTTPAuthorizationCredentials
 from app.core.security_scheme import security
+from app.ai.ai_service import ai_service
 
 logger = get_logger(__name__)
 
@@ -160,3 +161,42 @@ async def delete_diary_entry(
     )
 
     return {"message": "Запись удалена"}
+
+
+@router.post("/{entry_id}/summarize", response_model=DiaryEntryResponse)
+async def summarize_entry(
+        entry_id: int,
+        current_user: User = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db),
+):
+    """
+    Генерация AI-резюме и инсайтов для записи дневника.
+    Проверяет согласия пользователя и использует fallback-провайдеры.
+    """
+
+    entry = await DiaryService.get_entry_by_id(
+        db=db,
+        entry_id=entry_id,
+        user_id=current_user.id,
+    )
+
+    if not entry:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Запись не найдена",
+        )
+
+    ai_result = await ai_service.summarize_entry(
+        text=entry.content,
+        user=current_user,
+        mood=entry.mood,
+    )
+
+    updated_entry = await DiaryService.update_ai_summary(
+        db=db,
+        entry=entry,
+        ai_summary=ai_result["summary"],
+        ai_insights=ai_result["insights"],
+    )
+
+    return updated_entry
