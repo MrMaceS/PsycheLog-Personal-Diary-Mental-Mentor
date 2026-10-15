@@ -9,6 +9,9 @@ from .mediation import (
     MediationConsent,
     MediationSubmission,
     MediationStatus,
+    GroupSession,
+    GroupEnrollment,
+    GroupSessionStatus,
 )
 from .notification import Notification, NotificationType
 from .media import MediaAttachment
@@ -32,6 +35,9 @@ __all__ = [
     "MediationConsent",
     "MediationSubmission",
     "MediationStatus",
+    "GroupSession",
+    "GroupEnrollment",
+    "GroupSessionStatus",
     "Notification",
     "NotificationType",
     "MediaAttachment",

@@ -15,3 +15,10 @@ class AIProvider(ABC):
         :return: Словарь с ключами 'summary' и 'insights'.
         """
         pass
+
+    @abstractmethod
+    async def generate(self, prompt: str, system_prompt: str = "") -> str:
+        """
+        Универсальная генерация текста на основе промпта (используется для медиации).
+        """
+        pass

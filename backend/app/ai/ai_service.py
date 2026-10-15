@@ -55,5 +55,32 @@ class AIService:
             detail="Сервис AI временно недоступен. Попробуйте позже.",
         )
 
+    async def generate_response(self, prompt: str, system_prompt: str = "") -> str:
+        """
+        Универсальный метод для генерации текста (используется в медиации).
+        """
+        last_exception = None
+        for provider in self.providers:
+            provider_name = provider.__class__.__name__
+            try:
+                logger.info("ai_generate_attempt", provider=provider_name)
+                result = await provider.generate(prompt, system_prompt)
+                logger.info("ai_generate_success", provider=provider_name)
+                return result
+            except Exception as e:
+                logger.error(
+                    "ai_generate_failed",
+                    provider=provider_name,
+                    error=str(e),
+                )
+                last_exception = e
+                continue
+
+        logger.error("all_ai_generate_providers_failed")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Сервис AI временно недоступен. Попробуйте позже.",
+        )
+
 
 ai_service = AIService()
