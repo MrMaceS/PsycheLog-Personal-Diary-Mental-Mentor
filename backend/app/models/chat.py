@@ -1,8 +1,16 @@
+import enum
 from sqlalchemy import (Column, Integer, String, Text, ForeignKey,
                         Boolean, Table, DateTime)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.models.base import BaseModel
+
+
+class ChatRole(str, enum.Enum):
+    OWNER = "owner"
+    ADMIN = "admin"
+    MEMBER = "member"
+
 
 chat_members = Table(
     "chat_members",
@@ -58,11 +66,26 @@ class Message(BaseModel):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"),
                      nullable=False, index=True)
 
-    content = Column(Text, nullable=False)
+    content = Column(Text, nullable=True)
+
+    media_attachment_id = Column(
+        Integer,
+        ForeignKey("media_attachments.id", ondelete="SET NULL"),
+        nullable=True
+    )
+
     is_edited = Column(Boolean, default=False)
     is_deleted = Column(Boolean, default=False)
+
+    deleted_by_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True
+    )
 
     edited_at = Column(DateTime(timezone=True), nullable=True)
 
     chat = relationship("Chat", back_populates="messages")
-    user = relationship("User", back_populates="messages")
+    user = relationship("User", foreign_keys=[user_id], back_populates="messages")
+    deleted_by = relationship("User", foreign_keys=[deleted_by_id])
+    media_attachment = relationship("MediaAttachment")

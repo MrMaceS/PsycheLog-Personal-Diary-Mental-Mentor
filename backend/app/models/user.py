@@ -55,8 +55,14 @@ class User(BaseModel):
     )
     messages = relationship(
         "Message",
+        foreign_keys="Message.user_id",
         back_populates="user",
         cascade="all, delete-orphan"
+    )
+    deleted_messages = relationship(
+        "Message",
+        foreign_keys="Message.deleted_by_id",
+        back_populates="deleted_by",
     )
     mediation_initiated = relationship(
         "MediationSession",

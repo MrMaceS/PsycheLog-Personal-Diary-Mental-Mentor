@@ -3,7 +3,7 @@ from .user import User
 from .auth import RefreshSession, OTPChallenge
 from .diary import DiaryEntry
 from .stabilization import DiaryDialog, DiaryMessage, DialogStatus
-from .chat import Chat, Message, chat_members
+from .chat import Chat, Message, chat_members, ChatRole
 from .mediation import (
     MediationSession,
     MediationConsent,
@@ -27,6 +27,7 @@ __all__ = [
     "Chat",
     "Message",
     "chat_members",
+    "ChatRole",
     "MediationSession",
     "MediationConsent",
     "MediationSubmission",
