@@ -29,6 +29,7 @@ celery
 google-generativeai
 groq
 httpx
+openai
 
 # Storage
 boto3

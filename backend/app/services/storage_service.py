@@ -1,3 +1,5 @@
+import os
+import tempfile
 import boto3
 from botocore.client import Config
 from app.core.config import settings
@@ -41,6 +43,22 @@ class StorageService:
             return url
         except Exception as e:
             logger.error("presigned_url_generation_failed", error=str(e))
+            raise
+
+    def download_file(self, object_name: str) -> str:
+        """
+        Скачивает файл из S3/MinIO во временный файл и возвращает путь к нему.
+        Вызывающая сторона обязана удалить этот файл после использования!
+        """
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".webm")
+        try:
+            self.s3_client.download_file(self.bucket_name, object_name, temp_file.name)
+            logger.info("file_downloaded_from_storage", object_name=object_name, temp_path=temp_file.name)
+            return temp_file.name
+        except Exception as e:
+            logger.error("file_download_failed", object_name=object_name, error=str(e))
+            if os.path.exists(temp_file.name):
+                os.remove(temp_file.name)
             raise
 
     def delete_file(self, object_name: str) -> bool:

@@ -65,6 +65,9 @@ class Settings(BaseSettings):
 
     LOG_LEVEL: str = "INFO"
 
+    #Whisper
+    TRANSCRIPTION_PROVIDER: str = "mock"
+
 
 @lru_cache
 def get_settings() -> Settings:

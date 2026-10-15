@@ -1,11 +1,14 @@
 import asyncio
+import os
 from sqlalchemy import select
 from app.workers.celery_app import celery_app
 from app.core.database import AsyncSessionLocal
 from app.models.media import MediaAttachment
 from app.core.logging_config import get_logger
 from app.services.storage_service import storage_service
+from app.ai.transcription_service import transcription_service
 from datetime import datetime, timezone
+
 logger = get_logger(__name__)
 
 
@@ -17,13 +20,11 @@ logger = get_logger(__name__)
 )
 def transcribe_media_task(self, media_id: int):
     """
-    Асинхронная транскрибация медиафайла.
-    1. Проверяет статус в БД.
-    2. Имитирует скачивание и обработку Whisper (здесь будет реальный вызов API).
-    3. Сохраняет текст и меняет статус на 'completed' или 'failed'.
+    Асинхронная транскрибация медиафайла через Whisper (Groq).
     """
 
     async def _process():
+        temp_file_path = None
         async with AsyncSessionLocal() as db:
             try:
                 result = await db.execute(
@@ -36,30 +37,19 @@ def transcribe_media_task(self, media_id: int):
                     return
 
                 if media.processing_status != "transcribing":
-                    logger.info(
-                        "transcribe_media_task_skipped: status changed",
-                        media_id=media_id,
-                        status=media.processing_status,
-                    )
+                    logger.info("transcribe_media_task_skipped: status changed", media_id=media_id,
+                                status=media.processing_status)
                     return
 
-                # Имитация скачивания и транскрибации (Whisper)
-                # В продакшене здесь будет:
-                # file_obj = storage_service.s3_client.get_object(Bucket=..., Key=media.file_path)
-                # result = whisper_model.transcribe(file_obj['Body'].read())
-                # transcription_text = result['text']
+                # 1. Скачиваем файл из MinIO во временное хранилище
+                temp_file_path = storage_service.download_file(media.file_path)
 
-                await asyncio.sleep(2)
+                # 2. Транскрибируем через сервис (с fallback)
+                transcription_text = await transcription_service.transcribe(temp_file_path)
 
-                transcription_text = (
-                    f"[Транскрибация аудио #{media.id}]: "
-                    "Пользователь описывает свой день, упоминает рабочие задачи и легкую усталость. "
-                    "Настроение в целом спокойное, но присутствует легкая тревога о будущем."
-                )
-
+                # 3. Сохраняем результат в БД
                 media.transcription = transcription_text
                 media.processing_status = "completed"
-
                 await db.commit()
 
                 logger.info(
@@ -70,22 +60,24 @@ def transcribe_media_task(self, media_id: int):
 
             except Exception as e:
                 await db.rollback()
-                logger.error(
-                    "transcribe_media_task_failed",
-                    media_id=media_id,
-                    error=str(e),
-                )
+                logger.error("transcribe_media_task_failed", media_id=media_id, error=str(e))
+
+                # Обновляем статус на failed в БД
+                if 'media' in locals() and media:
+                    media.processing_status = "failed"
+                    await db.commit()
 
                 raise self.retry(exc=e)
+            finally:
+                # 4. Обязательно очищаем временный файл
+                if temp_file_path and os.path.exists(temp_file_path):
+                    os.remove(temp_file_path)
+                    logger.debug("temp_file_cleaned", path=temp_file_path)
 
     try:
         asyncio.run(_process())
     except Exception as e:
-        logger.error(
-            "transcribe_media_task_asyncio_failed",
-            media_id=media_id,
-            error=str(e),
-        )
+        logger.error("transcribe_media_task_asyncio_failed", media_id=media_id, error=str(e))
         raise self.retry(exc=e)
 
 
